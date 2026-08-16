@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">WhatsAutoBot</string>
+    <string name="accessibility_service_label">WhatsAutoBot - Send WhatsApp Messages</string>
+    <string name="notification_listener_label">WhatsAutoBot - Auto Reply</string>
+</resources>

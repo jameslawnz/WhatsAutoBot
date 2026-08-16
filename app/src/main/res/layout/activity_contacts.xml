@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Contacts"
+        android:textAppearance="@style/Text.Head" />
+
+    <TextView
+        android:id="@+id/tv_contacts_info"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text=""
+        android:textAppearance="@style/Text.BodyMuted" />
+
+    <android.widget.ListView
+        android:id="@+id/lv_contacts"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="16dp"
+        android:layout_weight="1"
+        android:background="@color/surface" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_use_in_sender"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="Use selected list in sender"
+        android:textAllCaps="false"
+        style="@style/Btn.Primary" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_clear_selected"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Delete selected list"
+        android:textAllCaps="false"
+        style="@style/Btn.Tonal" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_rename_selected"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Rename selected list"
+        android:textAllCaps="false"
+        style="@style/Btn.Tonal" />
+
+</LinearLayout>

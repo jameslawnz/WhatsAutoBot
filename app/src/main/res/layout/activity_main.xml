@@ -1,0 +1,294 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <!-- Header -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="WhatsAutoBot"
+            android:textAppearance="@style/Text.Head" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Personalized WhatsApp sender with auto-reply"
+            android:textAppearance="@style/Text.BodyMuted" />
+
+        <!-- Step 1: Choose recipients -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="1 · Choose recipients"
+            android:textAppearance="@style/Text.Section" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Pick contacts from your phone or a WhatsApp group to personalise messages to."
+            android:textAppearance="@style/Text.BodyMuted"
+            android:textSize="12sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_scan_contacts"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Scan phone contacts for WhatsApp"
+            android:textAllCaps="false"
+            style="@style/Btn.Tonal" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_capture_group"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Import contacts from a WhatsApp group"
+            android:textAllCaps="false"
+            style="@style/Btn.Tonal" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_view_contacts"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="View saved contacts"
+            android:textAllCaps="false"
+            style="@style/Btn.Tonal" />
+
+        <TextView
+            android:id="@+id/tv_lists"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text=""
+            android:textAppearance="@style/Text.BodyMuted"
+            android:textSize="12sp" />
+
+        <!-- Step 2: Message -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="28dp"
+            android:text="2 · Message"
+            android:textAppearance="@style/Text.Section" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="{name} is replaced with each recipient's name."
+            android:textAppearance="@style/Text.BodyMuted"
+            android:textSize="12sp" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/til_template"
+            style="@style/Input.Outlined"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:hint="Template"
+            app:endIconMode="none">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/et_template"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="top"
+                android:inputType="textMultiLine"
+                android:maxLines="4"
+                android:minHeight="120dp" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="Recipients"
+            android:textAppearance="@style/Text.Section" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Filled from your selected list. Edit if needed — one per line, comma separated: Name, phone."
+            android:textAppearance="@style/Text.BodyMuted"
+            android:textSize="12sp" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/til_recipients"
+            style="@style/Input.Outlined"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:hint="Recipients"
+            app:endIconMode="none">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/et_recipients"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="top"
+                android:inputType="textMultiLine"
+                android:maxLines="10"
+                android:minHeight="150dp" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Step 3: Send -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="28dp"
+            android:text="3 · Send"
+            android:textAppearance="@style/Text.Section" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            style="@style/Card.WhatsAuto">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:id="@+id/tv_status"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Idle"
+                    android:textAppearance="@style/Text.Status" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_test"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Send test"
+                        android:textAllCaps="false"
+                        style="@style/Btn.Primary" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_start"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
+                        android:layout_weight="1"
+                        android:text="Start queue"
+                        android:textAllCaps="false"
+                        style="@style/Btn.Tonal" />
+                </LinearLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_stop"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Stop sending"
+                    android:textAllCaps="false"
+                    style="@style/Btn.Tonal" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_preview"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Preview messages"
+                    android:textAllCaps="false"
+                    style="@style/Btn.Text" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Test goes to +6421668078 only, until you confirm a rollout."
+                    android:textAppearance="@style/Text.BodyMuted"
+                    android:textSize="12sp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Auto-respond section -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="28dp"
+            android:text="Auto-respond"
+            android:textAppearance="@style/Text.Section" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="{sender} and {message} are available in the reply."
+            android:textAppearance="@style/Text.BodyMuted"
+            android:textSize="12sp" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/til_reply"
+            style="@style/Input.Outlined"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:hint="Reply"
+            app:endIconMode="none">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/et_reply_template"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="top"
+                android:inputType="textMultiLine"
+                android:maxLines="4"
+                android:minHeight="100dp" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_toggle_reply"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Enable auto-respond"
+            android:textAllCaps="false"
+            style="@style/Btn.Tonal" />
+
+        <!-- Service setup rows -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_accessibility"
+            style="@style/Btn.Text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Enable Accessibility service"
+            android:textAlignment="viewStart" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_notifications"
+            style="@style/Btn.Text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Enable notification access"
+            android:textAlignment="viewStart" />
+    </LinearLayout>
+</ScrollView>

@@ -1,0 +1,84 @@
+<resources>
+    <!-- Shape: one soft rounded system (16dp) across cards, inputs, buttons. -->
+    <style name="ShapeAppearance.WhatsAuto" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">16dp</item>
+    </style>
+
+    <!-- Base text hierarchy -->
+    <style name="Text.Head" parent="TextAppearance.Material3.HeadlineSmall">
+        <item name="android:textColor">@color/on_surface</item>
+        <item name="android:letterSpacing">-0.01</item>
+        <item name="android:fontFamily">sans-serif</item>
+    </style>
+    <style name="Text.Section" parent="TextAppearance.Material3.TitleMedium">
+        <item name="android:textColor">@color/on_surface</item>
+    </style>
+    <style name="Text.BodyMuted" parent="TextAppearance.Material3.BodyMedium">
+        <item name="android:textColor">@color/on_surface_variant</item>
+    </style>
+    <style name="Text.Status" parent="TextAppearance.Material3.BodyMedium">
+        <item name="android:textColor">@color/on_surface</item>
+    </style>
+
+    <!-- Buttons: filled (primary), tonal (secondary), text (settings rows). -->
+    <style name="Btn.Primary" parent="Widget.Material3.Button">
+        <item name="shapeAppearance">@style/ShapeAppearance.WhatsAuto</item>
+        <item name="backgroundTint">@color/accent</item>
+        <item name="android:textColor">@color/on_accent</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0</item>
+        <item name="android:minHeight">52dp</item>
+        <item name="cornerRadius">16dp</item>
+    </style>
+    <style name="Btn.Tonal" parent="Widget.Material3.Button.TonalButton">
+        <item name="shapeAppearance">@style/ShapeAppearance.WhatsAuto</item>
+        <item name="backgroundTint">@color/tonal_bg</item>
+        <item name="android:textColor">@color/on_tonal</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0</item>
+        <item name="android:minHeight">52dp</item>
+        <item name="cornerRadius">16dp</item>
+    </style>
+    <style name="Btn.Text" parent="Widget.Material3.Button.TextButton">
+        <item name="shapeAppearance">@style/ShapeAppearance.WhatsAuto</item>
+        <item name="android:textColor">@color/on_surface_variant</item>
+        <item name="android:textStyle">normal</item>
+        <item name="android:letterSpacing">0</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="cornerRadius">16dp</item>
+    </style>
+
+    <!-- Input: outlined Material field, our rounded shape, full-height labels. -->
+    <style name="Input.Outlined" parent="Widget.Material3.TextInputLayout.OutlinedBox.Dense">
+        <item name="shapeAppearance">@style/ShapeAppearance.WhatsAuto</item>
+        <item name="boxBackgroundColor">@color/surface</item>
+        <item name="boxStrokeColor">@color/outline</item>
+        <item name="boxStrokeErrorColor">@color/error</item>
+        <item name="boxStrokeWidth">1dp</item>
+        <item name="boxStrokeWidthFocused">1dp</item>
+        <item name="hintTextColor">@color/on_surface_variant</item>
+        <item name="errorTextColor">@color/error</item>
+        <item name="android:textColorHint">@color/on_surface_variant</item>
+        <item name="android:textColor">@color/on_surface</item>
+    </style>
+
+    <!-- Card for status and grouped controls. -->
+    <style name="Card.WhatsAuto" parent="Widget.Material3.CardView.Elevated">
+        <item name="shapeAppearance">@style/ShapeAppearance.WhatsAuto</item>
+        <item name="cardBackgroundColor">@color/surface</item>
+        <item name="cardElevation">0dp</item>
+        <item name="strokeColor">@color/outline</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="android:textColor">@color/on_surface</item>
+    </style>
+
+    <!-- Chip for the live status indicator (semantic state only). -->
+    <style name="Chip.WhatsAuto" parent="Widget.Material3.Chip.Suggestion">
+        <item name="shapeAppearance">@style/ShapeAppearance.WhatsAuto</item>
+        <item name="chipBackgroundColor">@color/chip_bg</item>
+        <item name="chipStrokeColor">@color/outline</item>
+        <item name="chipStrokeWidth">1dp</item>
+        <item name="android:textColor">@color/on_surface</item>
+    </style>
+</resources>

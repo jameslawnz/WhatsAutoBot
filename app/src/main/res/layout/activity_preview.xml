@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Message preview"
+            android:textAppearance="@style/Text.Head" />
+
+        <TextView
+            android:id="@+id/tv_progress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0 / 0"
+            android:textAppearance="@style/Text.Section" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tv_recipient"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text=""
+        android:textAppearance="@style/Text.Status"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/tv_phone"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:text=""
+        android:textAppearance="@style/Text.BodyMuted" />
+
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="16dp"
+        android:layout_weight="1"
+        style="@style/Card.WhatsAuto">
+
+        <TextView
+            android:id="@+id/tv_message"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="16dp"
+            android:text=""
+            android:scrollbars="vertical"
+            android:textAppearance="@style/Text.Status" />
+    </com.google.android.material.card.MaterialCardView>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:orientation="horizontal">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_prev"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="◀ Prev"
+            android:textAllCaps="false"
+            style="@style/Btn.Tonal" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_use"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1.4"
+            android:text="Use in sender"
+            android:textAllCaps="false"
+            style="@style/Btn.Primary" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_next"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:text="Next ▶"
+            android:textAllCaps="false"
+            style="@style/Btn.Tonal" />
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="Quick list of all recipients:"
+        android:textAppearance="@style/Text.Section" />
+
+    <ListView
+        android:id="@+id/lv_quick"
+        android:layout_width="match_parent"
+        android:layout_height="160dp"
+        android:layout_marginTop="8dp"
+        android:background="@color/surface" />
+
+</LinearLayout>
