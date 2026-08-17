@@ -60,22 +60,48 @@ class WaAutoSendService : AccessibilityService() {
     private fun ensureRunning() {
         if (started) return
         started = true
-        handler.post { when (AutoMode.current) {
-            AutoMode.SEND -> advanceAndOpen()
-            AutoMode.SCAN -> { if (ScanState.active) openScanChat() }
-            else -> {}
-        } }
+        handler.post {
+            if (AutoMode.current == AutoMode.NONE && WaQueue.restore(applicationContext)) {
+                // Process was killed mid-campaign; resume sending.
+                AutoMode.current = AutoMode.SEND
+                advanceAndOpen()
+            } else {
+                when (AutoMode.current) {
+                    AutoMode.SEND -> advanceAndOpen()
+                    AutoMode.SCAN -> { if (ScanState.active) openScanChat() }
+                    else -> {}
+                }
+            }
+        }
     }
 
     private fun advanceAndOpen() {
         if (!isServiceEnabled()) return
         if (!WaQueue.isRunning) return
-        val msg = WaQueue.advance() ?: run {
+        if (!Throttler.canSendNow(applicationContext)) {
+            // Daily quota reached or outside the send window: stop cleanly.
             WaQueue.setRunning(false)
+            WaQueue.save(applicationContext)
             WaQueue.broadcast(applicationContext)
+            CampaignStore.currentId(applicationContext)?.let { CampaignStore.finish(applicationContext, it, Campaign.STATUS_QUOTA) }
             performGlobalAction(GLOBAL_ACTION_HOME)
             return
         }
+        // Skip numbers already messaged within the dedup window.
+        var msg = WaQueue.advance()
+        while (msg != null && Throttler.wasSentRecently(applicationContext, msg.phone)) {
+            CampaignStore.currentId(applicationContext)?.let { CampaignStore.increment(applicationContext, it, skipped = 1) }
+            msg = WaQueue.advance()
+        }
+        if (msg == null) {
+            WaQueue.setRunning(false)
+            WaQueue.save(applicationContext)
+            WaQueue.broadcast(applicationContext)
+            CampaignStore.currentId(applicationContext)?.let { CampaignStore.finish(applicationContext, it) }
+            performGlobalAction(GLOBAL_ACTION_HOME)
+            return
+        }
+        WaQueue.save(applicationContext)
         WaQueue.broadcast(applicationContext)
         openChat(msg)
     }
@@ -83,8 +109,11 @@ class WaAutoSendService : AccessibilityService() {
     private fun openChat(msg: PendingMessage) {
         try {
             startActivity(Intent(Intent.ACTION_VIEW, Phones.waMe(msg.phone, msg.text)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            ErrorLog.log(applicationContext, "Failed to open chat", "${msg.phone}: ${e.message}")
+            CampaignStore.currentId(applicationContext)?.let { CampaignStore.increment(applicationContext, it, failed = 1) }
             WaQueue.stop()
+            WaQueue.save(applicationContext)
             WaQueue.broadcast(applicationContext)
         }
     }
@@ -106,7 +135,7 @@ class WaAutoSendService : AccessibilityService() {
         handler.postDelayed({
             sending.remove(msg.phone + "|" + msg.text.take(20))
             tapSend(msg)
-        }, Prefs.delayMs(applicationContext))
+        }, nextDelay())
     }
 
     private fun tapSend(msg: PendingMessage) {
@@ -114,13 +143,14 @@ class WaAutoSendService : AccessibilityService() {
         val root = rootInActiveWindow ?: return
         val openAndSend = { send: AccessibilityNodeInfo ->
             tapNode(send)
+            recordSent(msg)
             handler.postDelayed({
                 performGlobalAction(GLOBAL_ACTION_HOME)
                 handler.postDelayed(
                     { if (WaQueue.isRunning) advanceAndOpen() },
-                    Prefs.delayMs(applicationContext)
+                    nextDelay()
                 )
-            }, Prefs.delayMs(applicationContext))
+            }, nextDelay())
         }
         val send = findSendButton(root)
         if (send != null) {
@@ -130,7 +160,7 @@ class WaAutoSendService : AccessibilityService() {
             fun retry() {
                 attempts++
                 if (attempts > 8) {
-                    handler.postDelayed({ advanceAndOpen() }, Prefs.delayMs(applicationContext))
+                    handler.postDelayed({ advanceAndOpen() }, nextDelay())
                     return
                 }
                 val rootNow = rootInActiveWindow ?: run {
@@ -143,6 +173,18 @@ class WaAutoSendService : AccessibilityService() {
             retry()
         }
         WaQueue.broadcast(applicationContext)
+    }
+
+    private fun nextDelay(): Long = Throttler.policy(applicationContext).nextDelayMs()
+
+    private fun recordSent(msg: PendingMessage) {
+        Throttler.recordSend(applicationContext)
+        Throttler.recordSentTo(applicationContext, msg.phone)
+        Throttler.prune(applicationContext)
+        CampaignStore.currentId(applicationContext)?.let {
+            CampaignStore.increment(applicationContext, it, sent = 1)
+            WaQueue.broadcast(applicationContext)
+        }
     }
 
     // ---------------------------------------------------------------- SCAN
@@ -234,7 +276,7 @@ class WaAutoSendService : AccessibilityService() {
         saveScanProgress(throttled = true)
         ScanState.broadcast(applicationContext, if (registered) "scan_found" else "scan_skip")
         performGlobalAction(GLOBAL_ACTION_HOME)
-        handler.postDelayed({ openScanChat() }, Prefs.delayMs(applicationContext))
+        handler.postDelayed({ openScanChat() }, nextDelay())
     }
 
     /** Persist progress so an interrupted scan is never lost. Writes are throttled

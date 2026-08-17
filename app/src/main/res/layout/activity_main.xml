@@ -69,6 +69,15 @@
             android:textAllCaps="false"
             style="@style/Btn.Tonal" />
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_view_history"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="View send history"
+            android:textAllCaps="false"
+            style="@style/Btn.Tonal" />
+
         <TextView
             android:id="@+id/tv_lists"
             android:layout_width="match_parent"

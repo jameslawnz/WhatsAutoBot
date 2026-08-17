@@ -23,9 +23,9 @@ object ContactStore {
 
     fun load(context: Context): MutableList<ContactList> {
         cache?.let { return it }
-        val json = prefs(context).getString(KEY_DATA, null)
+        val json = Crypto.decrypt(prefs(context).getString(KEY_DATA, "") ?: "")
         val out = mutableListOf<ContactList>()
-        if (json != null) {
+        if (json.isNotEmpty()) {
             try {
                 val arr = JSONArray(json)
                 for (i in 0 until arr.length()) {
@@ -76,7 +76,7 @@ object ContactStore {
             o.put("entries", entries.toString())
             arr.put(o)
         }
-        prefs(context).edit().putString(KEY_DATA, arr.toString()).apply()
+        prefs(context).edit().putString(KEY_DATA, Crypto.encrypt(arr.toString())).apply()
     }
 
     fun listOf(context: Context, id: String): ContactList? =

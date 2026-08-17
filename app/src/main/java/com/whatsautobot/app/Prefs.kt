@@ -14,17 +14,29 @@ object Prefs {
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 
     fun template(context: Context): String =
-        get(context).getString(KEY_TEMPLATE, "") ?: ""
+        Crypto.decrypt(get(context).getString(KEY_TEMPLATE, "") ?: "")
 
     fun recipientsRaw(context: Context): String =
-        get(context).getString(KEY_RECIPIENTS, "") ?: ""
+        Crypto.decrypt(get(context).getString(KEY_RECIPIENTS, "") ?: "")
 
     fun autoReply(context: Context): Boolean =
         get(context).getBoolean(KEY_AUTO_REPLY, false)
 
     fun replyTemplate(context: Context): String =
-        get(context).getString(KEY_REPLY_TEMPLATE, "") ?: ""
+        Crypto.decrypt(get(context).getString(KEY_REPLY_TEMPLATE, "") ?: "")
 
     fun delayMs(context: Context): Long =
         get(context).getLong(KEY_DELAY_MS, 2500)
+
+    fun saveTemplate(context: Context, value: String) =
+        get(context).edit().putString(KEY_TEMPLATE, Crypto.encrypt(value)).apply()
+
+    fun saveRecipients(context: Context, value: String) =
+        get(context).edit().putString(KEY_RECIPIENTS, Crypto.encrypt(value)).apply()
+
+    fun saveReplyTemplate(context: Context, value: String) =
+        get(context).edit().putString(KEY_REPLY_TEMPLATE, Crypto.encrypt(value)).apply()
+
+    fun setAutoReply(context: Context, value: Boolean) =
+        get(context).edit().putBoolean(KEY_AUTO_REPLY, value).apply()
 }

@@ -39,12 +39,7 @@ class WaAutoRespondService : NotificationListenerService() {
 
     private fun buildReply(sender: String, body: String): String {
         val t = Prefs.replyTemplate(applicationContext).trim().ifEmpty { "Hi {sender}, thanks for your message." }
-        return t
-            .replace("{sender}", sender)
-            .replace("{name}", sender)
-            .replace("{message}", body)
-            .replace("{body}", body)
-            .trim()
+        return Templates.personalise(t, name = sender, sender = sender, message = body)
     }
 
     private fun sendReply(action: Notification.Action, text: String, sender: String) {

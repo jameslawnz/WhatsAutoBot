@@ -27,6 +27,11 @@
             android:label="Contacts" />
 
         <activity
+            android:name=".CampaignsActivity"
+            android:exported="false"
+            android:label="History" />
+
+        <activity
             android:name=".PreviewActivity"
             android:exported="false"
             android:label="Preview" />

@@ -47,7 +47,7 @@ class PreviewActivity : AppCompatActivity() {
             return
         }
         recipients.forEach { (name, phone) ->
-            entries.add(Entry(name, phone, template.replace("{name}", name)))
+            entries.add(Entry(name, phone, Templates.personalise(template, name = name, phone = phone)))
         }
 
         // Quick list

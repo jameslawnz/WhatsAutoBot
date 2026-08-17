@@ -35,7 +35,11 @@ class MainActivity : AppCompatActivity() {
             val state = intent.getStringExtra(WaQueue.EXTRA_STATE)
             val count = intent.getIntExtra(WaQueue.EXTRA_COUNT, 0)
             tvStatus.text = when (state) {
-                WaQueue.STATE_OPEN_NEXT -> "Sending... $count left in queue"
+                WaQueue.STATE_OPEN_NEXT -> {
+                    val c = CampaignStore.current(context)
+                    if (c != null) "Sending... $count left · ${c.sent} sent · ${c.skipped} skipped · ${c.failed} failed"
+                    else "Sending... $count left in queue"
+                }
                 else -> "Status: idle"
             }
         }
@@ -153,6 +157,8 @@ class MainActivity : AppCompatActivity() {
             WaQueue.stop()
             WaQueue.enqueue(test)
             WaQueue.setRunning(true)
+            WaQueue.save(this)
+            CampaignStore.start(this, CampaignStore.defaultName(this), template, 1)
             AutoMode.current = AutoMode.SEND
             sendBroadcast(Intent(WaQueue.BROADCAST))
             Toast.makeText(this, "Sending test to +64 216 680 78", Toast.LENGTH_SHORT).show()
@@ -176,6 +182,8 @@ class MainActivity : AppCompatActivity() {
                 WaQueue.enqueue(PendingMessage(name, phone, personalise(template, name)))
             }
             WaQueue.setRunning(true)
+            WaQueue.save(this)
+            CampaignStore.start(this, CampaignStore.defaultName(this), template, list.size)
             AutoMode.current = AutoMode.SEND
             tvStatus.text = "Queue ready: ${WaQueue.size()} message(s). Starting..."
             sendBroadcast(Intent(WaQueue.BROADCAST))
@@ -184,6 +192,8 @@ class MainActivity : AppCompatActivity() {
 
         findViewById<Button>(R.id.btn_stop).setOnClickListener {
             WaQueue.stop()
+            WaQueue.save(this)
+            CampaignStore.currentId(this)?.let { CampaignStore.finish(this, it, Campaign.STATUS_STOPPED) }
             ScanState.stop()
             CaptureState.disarm()
             AutoMode.current = AutoMode.NONE
@@ -193,8 +203,8 @@ class MainActivity : AppCompatActivity() {
 
         btnToggleReply.setOnClickListener {
             replyEnabled = !replyEnabled
-            Prefs.get(this).edit().putBoolean(Prefs.KEY_AUTO_REPLY, replyEnabled).apply()
-            etReply.text?.let { Prefs.get(this).edit().putString(Prefs.KEY_REPLY_TEMPLATE, it.toString()).apply() }
+            Prefs.setAutoReply(this, replyEnabled)
+            etReply.text?.let { Prefs.saveReplyTemplate(this, it.toString()) }
             updateReplyButton()
             Toast.makeText(this, if (replyEnabled) "Auto-respond enabled" else "Auto-respond disabled", Toast.LENGTH_SHORT).show()
         }
@@ -211,6 +221,10 @@ class MainActivity : AppCompatActivity() {
 
         findViewById<Button>(R.id.btn_view_contacts).setOnClickListener {
             viewContactsLauncher.launch(Intent(this, ContactsActivity::class.java))
+        }
+
+        findViewById<Button>(R.id.btn_view_history).setOnClickListener {
+            startActivity(Intent(this, CampaignsActivity::class.java))
         }
 
         findViewById<Button>(R.id.btn_preview).setOnClickListener {
@@ -249,19 +263,17 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun personalise(template: String, name: String): String =
-        template.replace("{name}", name)
+    private fun personalise(template: String, name: String, phone: String = ""): String =
+        Templates.personalise(template, name = name, phone = phone)
 
     // "Name, +64216..." per line
     private fun parseRecipients(): List<Pair<String, String>> =
         Phones.parseRecipients(etRecipients.text.toString())
 
     private fun saveInputs() {
-        Prefs.get(this).edit()
-            .putString(Prefs.KEY_TEMPLATE, etTemplate.text.toString())
-            .putString(Prefs.KEY_RECIPIENTS, etRecipients.text.toString())
-            .putString(Prefs.KEY_REPLY_TEMPLATE, etReply.text.toString())
-            .apply()
+        Prefs.saveTemplate(this, etTemplate.text.toString())
+        Prefs.saveRecipients(this, etRecipients.text.toString())
+        Prefs.saveReplyTemplate(this, etReply.text.toString())
     }
 
     private fun updateReplyButton() {
