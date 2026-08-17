@@ -132,3 +132,8 @@ object CaptureState {
         context.sendBroadcast(i)
     }
 }
+
+/** Remembers the most recently captured group list id (consumed by MainActivity). */
+object CapturedIdHolder {
+    var last: String? = null
+}

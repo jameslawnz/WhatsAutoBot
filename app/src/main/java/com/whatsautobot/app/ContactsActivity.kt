@@ -100,7 +100,7 @@ class ContactsActivity : AppCompatActivity() {
     private fun showEntries(l: ContactList) {
         tvInfo.text = "${l.label} — ${l.entries.size} contact(s)"
         val rows = l.entries.map {
-            val flag = if (l.source == "phone_scan") (if (it.onWhatsApp) " · on WhatsApp" else " · not on WhatsApp") else ""
+            val flag = if (l.source == ContactStore.SOURCE_PHONE_SCAN) (if (it.onWhatsApp) " · on WhatsApp" else " · not on WhatsApp") else ""
             val name = it.name.ifBlank { it.phone }
             "$name, ${it.phone}$flag"
         }

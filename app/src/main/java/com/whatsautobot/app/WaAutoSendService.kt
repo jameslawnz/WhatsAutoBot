@@ -18,6 +18,9 @@ class WaAutoSendService : AccessibilityService() {
 
     companion object {
         private const val TAG = "WhatsAutoBot"
+        private val MEMBER_COUNT_RE = Regex("[\\d,]+ members?")
+        private val MEMBER_COUNT_ZH_RE = Regex("[\\d,]+ 位成员")
+        private val GROUP_MEMBER_COUNT_RE = Regex("[\\d,\\s]+(members?|位成员|参与者?)")
     }
 
     private val handler = Handler(Looper.getMainLooper())
@@ -93,7 +96,7 @@ class WaAutoSendService : AccessibilityService() {
         val editText = findEditText(root)
         return when {
             editText != null && !editText.text.isNullOrEmpty() -> true
-            else -> findText(root, msg.text.trim().take(30).toRegex(RegexOption.IGNORE_CASE)) || isSendEnabled(send)
+            else -> findText(root, Regex.escape(msg.text.trim().take(30)), ignoreCase = true) || isSendEnabled(send)
         }
     }
 
@@ -131,7 +134,11 @@ class WaAutoSendService : AccessibilityService() {
                     handler.postDelayed({ advanceAndOpen() }, Prefs.delayMs(applicationContext))
                     return
                 }
-                val s = findSendButton(rootInActiveWindow ?: return)
+                val rootNow = rootInActiveWindow ?: run {
+                    handler.postDelayed({ retry() }, 700)
+                    return
+                }
+                val s = findSendButton(rootNow)
                 if (s != null) openAndSend(s) else handler.postDelayed({ retry() }, 700)
             }
             retry()
@@ -192,27 +199,20 @@ class WaAutoSendService : AccessibilityService() {
             "com.whatsapp:id/chat_name",
             "com.whatsapp:id/contact_name"
         )
-        val stack = ArrayDeque<AccessibilityNodeInfo>()
-        stack.addLast(root)
-        while (stack.isNotEmpty()) {
-            val node = stack.removeLast()
+        forEachNode(root) { node ->
             node.viewIdResourceName?.let { vid ->
                 if (vid in idNames) {
                     val t = node.text?.toString()?.trim().orEmpty()
                     if (t.isNotEmpty() && t.length in 2..60) return t
                 }
             }
-            for (i in 0 until node.childCount) node.getChild(i)?.let { stack.addLast(it) }
         }
         // Fallback: largest upper-half text node.
         val screen = Rect()
         root.getBoundsInScreen(screen)
         var best: String? = null
         var bestArea = 0
-        val stack2 = ArrayDeque<AccessibilityNodeInfo>()
-        stack2.addLast(root)
-        while (stack2.isNotEmpty()) {
-            val node = stack2.removeLast()
+        forEachNode(root) { node ->
             val t = node.text?.toString()?.trim().orEmpty()
             if (t.isNotEmpty() && extractPhone(t) == null && node.isVisibleToUser) {
                 val r = Rect()
@@ -223,7 +223,6 @@ class WaAutoSendService : AccessibilityService() {
                     best = t
                 }
             }
-            for (i in 0 until node.childCount) node.getChild(i)?.let { stack2.addLast(it) }
         }
         return best?.takeIf { it.length in 2..60 }
     }
@@ -231,21 +230,25 @@ class WaAutoSendService : AccessibilityService() {
     private fun classify(registered: Boolean) {
         val current = ScanState.current ?: return
         ScanState.setResult(current.second, registered)
-        saveScanProgress()
+        saveScanProgress(throttled = true)
         ScanState.broadcast(applicationContext, if (registered) "scan_found" else "scan_skip")
         performGlobalAction(GLOBAL_ACTION_HOME)
         handler.postDelayed({ openScanChat() }, Prefs.delayMs(applicationContext))
     }
 
-    /** Persist progress so an interrupted scan is never lost. */
-    private fun saveScanProgress() {
+    /** Persist progress so an interrupted scan is never lost. Writes are throttled
+     *  to every 10 contacts to keep the repeated full-store save off the main thread. */
+    private fun saveScanProgress(throttled: Boolean = false) {
+        if (throttled && ++scanSaveTicks % 10 != 0) return
         val results = ScanState.allResults()
         val entries = results.map { ContactEntry(it.first, it.second, it.third) }
         ContactStore.upsert(
             applicationContext,
-            ContactList("phone_scan", "Phone contacts (WhatsApp)", "phone_scan", entries.toMutableList())
+            ContactList(ContactStore.SOURCE_PHONE_SCAN, "Phone contacts (WhatsApp)", ContactStore.SOURCE_PHONE_SCAN, entries.toMutableList())
         )
     }
+
+    private var scanSaveTicks = 0
 
     private fun openScanChat() {
         if (!ScanState.active) return
@@ -354,21 +357,17 @@ class WaAutoSendService : AccessibilityService() {
         data class Token(val text: String, val y: Int, val isPhone: Boolean)
 
         val tokens = mutableListOf<Token>()
-        val stack = ArrayDeque<AccessibilityNodeInfo>()
-        stack.addLast(root)
-        while (stack.isNotEmpty()) {
-            val node = stack.removeLast()
+        forEachNode(root) { node ->
             val t = node.text?.toString()?.trim().orEmpty()
             if (t.isNotEmpty() && node.isVisibleToUser && !node.isEditable) {
                 // Skip obvious chrome / counts.
-                if (t.matches(Regex("[\\d,]+ members?")) || t.matches(Regex("[\\d,]+ 位成员"))) continue
-                if (t.equals("Search", true) || t.contains("搜索")) continue
+                if (MEMBER_COUNT_RE.matches(t) || MEMBER_COUNT_ZH_RE.matches(t)) return@forEachNode
+                if (t.equals("Search", true) || t.contains("搜索")) return@forEachNode
                 val r = Rect()
                 node.getBoundsInScreen(r)
                 val isPhone = extractPhone(t) != null
                 tokens.add(Token(t, (r.top + r.bottom) / 2, isPhone))
             }
-            for (i in 0 until node.childCount) node.getChild(i)?.let { stack.addLast(it) }
         }
 
         // Order by vertical position.
@@ -405,19 +404,16 @@ class WaAutoSendService : AccessibilityService() {
     private fun readGroupName(root: AccessibilityNodeInfo): String? {
         val screen = Rect()
         root.getBoundsInScreen(screen)
-        val stack = ArrayDeque<AccessibilityNodeInfo>()
-        stack.addLast(root)
         var best: String? = null
         var bestScore = -1
-        while (stack.isNotEmpty()) {
-            val node = stack.removeLast()
-            if (node.isEditable) continue // skip the search field itself
+        forEachNode(root) { node ->
+            if (node.isEditable) return@forEachNode // skip the search field itself
             val t = node.text?.toString()?.trim().orEmpty()
             if (t.isNotEmpty() && extractPhone(t) == null) {
                 // Skip member counts like "506 members".
-                if (t.matches(Regex("[\\d,\\s]+(members?|位成员|参与者?)"))) continue
+                if (GROUP_MEMBER_COUNT_RE.matches(t)) return@forEachNode
                 // Skip the search placeholder/hint.
-                if (t.equals("Search", true) || t.contains("搜索") || t.contains("查找")) continue
+                if (t.equals("Search", true) || t.contains("搜索") || t.contains("查找")) return@forEachNode
                 val r = Rect()
                 node.getBoundsInScreen(r)
                 // Group name sits in the top bar (upper half of screen), ideally with some width.
@@ -431,7 +427,6 @@ class WaAutoSendService : AccessibilityService() {
                     }
                 }
             }
-            for (i in 0 until node.childCount) node.getChild(i)?.let { stack.addLast(it) }
         }
         return best?.takeIf { it.length in 1..80 }
     }
@@ -443,7 +438,7 @@ class WaAutoSendService : AccessibilityService() {
         val id = "group_" + System.currentTimeMillis()
         ContactStore.upsert(
             applicationContext,
-            ContactList(id, CaptureState.label, "group_import", entries.toMutableList())
+            ContactList(id, CaptureState.label, ContactStore.SOURCE_GROUP_IMPORT, entries.toMutableList())
         )
         CapturedIdHolder.last = id
         CaptureState.broadcast(applicationContext, "capture_done")
@@ -474,39 +469,27 @@ class WaAutoSendService : AccessibilityService() {
             "isn't on WhatsApp", "is not on WhatsApp", "invalid phone number",
             "号码无效", "未注册 WhatsApp", "not using WhatsApp"
         )
-        val stack = ArrayDeque<AccessibilityNodeInfo>()
-        stack.addLast(root)
-        while (stack.isNotEmpty()) {
-            val node = stack.removeLast()
+        forEachNode(root) { node ->
             val text = (node.text?.toString().orEmpty() + " " + node.contentDescription?.toString().orEmpty())
             if (patterns.any { text.contains(it, true) }) return true
-            for (i in 0 until node.childCount) node.getChild(i)?.let { stack.addLast(it) }
         }
         return false
     }
 
     private fun findNodeByHint(root: AccessibilityNodeInfo, match: (String) -> Boolean): AccessibilityNodeInfo? {
-        val stack = ArrayDeque<AccessibilityNodeInfo>()
-        stack.addLast(root)
-        while (stack.isNotEmpty()) {
-            val node = stack.removeLast()
+        forEachNode(root) { node ->
             val hint = node.hintText?.toString().orEmpty()
             val cd = node.contentDescription?.toString().orEmpty()
             val txt = node.text?.toString().orEmpty()
             if (match(hint) || match(cd) || match(txt)) return node
-            for (i in 0 until node.childCount) node.getChild(i)?.let { stack.addLast(it) }
         }
         return null
     }
 
     private fun countPhoneNumbers(root: AccessibilityNodeInfo): Int {
         var count = 0
-        val stack = ArrayDeque<AccessibilityNodeInfo>()
-        stack.addLast(root)
-        while (stack.isNotEmpty()) {
-            val node = stack.removeLast()
+        forEachNode(root) { node ->
             node.text?.toString()?.let { if (extractPhone(it) != null) count++ }
-            for (i in 0 until node.childCount) node.getChild(i)?.let { stack.addLast(it) }
         }
         return count
     }
@@ -514,36 +497,31 @@ class WaAutoSendService : AccessibilityService() {
     /** Rough count of plausible member-row name rows (short-ish text spans without numbers). */
     private fun countNameRows(root: AccessibilityNodeInfo): Int {
         var count = 0
-        val stack = ArrayDeque<AccessibilityNodeInfo>()
-        stack.addLast(root)
-        while (stack.isNotEmpty()) {
-            val node = stack.removeLast()
+        forEachNode(root) { node ->
             val t = node.text?.toString()?.trim().orEmpty()
             if (t.isNotEmpty() && t.length in 4..60 && extractPhone(t) == null && !t.contains("\n") && node.isVisibleToUser) {
                 count++
             }
-            for (i in 0 until node.childCount) node.getChild(i)?.let { stack.addLast(it) }
         }
         return count
     }
 
-    private fun extractPhone(text: String): String? {
-        val t = text.replace(" ", "").replace("-", "")
-        val m = Regex("\\+?\\d{9,13}").find(t) ?: return null
-        var p = m.value
-        if (!p.startsWith("+")) p = "+$p"
-        val digits = p.filter { it.isDigit() }
-        if (digits.length in 9..12) return "+$digits"
-        return null
-    }
+    private fun extractPhone(text: String): String? = Phones.extract(text)
 
     // ---------------------------------------------------------------- shared helpers
-    private fun findSendButton(root: AccessibilityNodeInfo): AccessibilityNodeInfo? {
-        val ids = setOf("com.whatsapp:id/send", "com.whatsapp:id/entry_send", "com.whatsapp:id/fab_send")
+    private inline fun forEachNode(root: AccessibilityNodeInfo, action: (AccessibilityNodeInfo) -> Unit) {
         val stack = ArrayDeque<AccessibilityNodeInfo>()
         stack.addLast(root)
         while (stack.isNotEmpty()) {
             val node = stack.removeLast()
+            action(node)
+            for (i in 0 until node.childCount) node.getChild(i)?.let { stack.addLast(it) }
+        }
+    }
+
+    private fun findSendButton(root: AccessibilityNodeInfo): AccessibilityNodeInfo? {
+        val ids = setOf("com.whatsapp:id/send", "com.whatsapp:id/entry_send", "com.whatsapp:id/fab_send")
+        forEachNode(root) { node ->
             node.viewIdResourceName?.let { if (it in ids) return node }
             node.contentDescription?.toString()?.let { cd ->
                 if (cd.equals("Send", true) || cd.equals("发送", true)) return node
@@ -551,7 +529,6 @@ class WaAutoSendService : AccessibilityService() {
             node.text?.toString()?.let { t ->
                 if (t.equals("Send", true)) return node
             }
-            for (i in 0 until node.childCount) node.getChild(i)?.let { stack.addLast(it) }
         }
         return null
     }
@@ -559,24 +536,17 @@ class WaAutoSendService : AccessibilityService() {
     private fun isSendEnabled(send: AccessibilityNodeInfo): Boolean = send.isEnabled
 
     private fun findEditText(root: AccessibilityNodeInfo): AccessibilityNodeInfo? {
-        val stack = ArrayDeque<AccessibilityNodeInfo>()
-        stack.addLast(root)
-        while (stack.isNotEmpty()) {
-            val node = stack.removeLast()
+        forEachNode(root) { node ->
             if (node.className?.toString()?.contains("EditText") == true || node.isEditable) return node
-            for (i in 0 until node.childCount) node.getChild(i)?.let { stack.addLast(it) }
         }
         return null
     }
 
-    private fun findText(root: AccessibilityNodeInfo, regex: Regex): Boolean {
-        val stack = ArrayDeque<AccessibilityNodeInfo>()
-        stack.addLast(root)
-        while (stack.isNotEmpty()) {
-            val node = stack.removeLast()
+    private fun findText(root: AccessibilityNodeInfo, pattern: String, ignoreCase: Boolean = false): Boolean {
+        val regex = Regex(pattern, if (ignoreCase) setOf(RegexOption.IGNORE_CASE) else emptySet())
+        forEachNode(root) { node ->
             node.text?.toString()?.let { if (regex.containsMatchIn(it)) return true }
             node.contentDescription?.toString()?.let { if (regex.containsMatchIn(it)) return true }
-            for (i in 0 until node.childCount) node.getChild(i)?.let { stack.addLast(it) }
         }
         return false
     }
@@ -608,8 +578,4 @@ class WaAutoSendService : AccessibilityService() {
     override fun onDestroy() {
         super.onDestroy()
     }
-}
-
-object CapturedIdHolder {
-    var last: String? = null
 }

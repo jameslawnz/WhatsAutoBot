@@ -10,6 +10,9 @@ import android.widget.Toast
 
 class WaAutoRespondService : NotificationListenerService() {
 
+    private val lastReplied = mutableMapOf<String, Long>()
+    private val replyCooldownMs = 60_000L
+
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         sbn ?: return
         if (sbn.packageName != "com.whatsapp") return
@@ -19,6 +22,12 @@ class WaAutoRespondService : NotificationListenerService() {
 
         val text = n.extras?.getCharSequence(Notification.EXTRA_TEXT)?.toString() ?: return
         val sender = n.extras?.getCharSequence(Notification.EXTRA_TITLE)?.toString() ?: ""
+
+        // Avoid replying twice to the same chat within the cooldown window (WhatsApp can
+        // post several notifications for one conversation).
+        val now = System.currentTimeMillis()
+        if (now - (lastReplied[sender] ?: 0L) < replyCooldownMs) return
+        lastReplied[sender] = now
 
         val replyAction = n.actions?.firstOrNull { a ->
             a.title?.toString()?.contains("Reply", true) == true

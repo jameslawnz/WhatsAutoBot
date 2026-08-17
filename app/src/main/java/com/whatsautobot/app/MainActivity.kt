@@ -54,7 +54,7 @@ class MainActivity : AppCompatActivity() {
                 else -> tvStatus.text.toString()
             }
             if (state == "scan_done") {
-                loadListIntoRecipients("phone_scan", onlyOnWhatsApp = true)
+                loadListIntoRecipients(ContactStore.SOURCE_PHONE_SCAN, onlyOnWhatsApp = true)
             }
             refreshLists()
         }
@@ -254,25 +254,8 @@ class MainActivity : AppCompatActivity() {
         template.replace("{name}", name)
 
     // "Name, +64216..." per line
-    private fun parseRecipients(): List<Pair<String, String>> {
-        val out = mutableListOf<Pair<String, String>>()
-        etRecipients.text.toString().lineSequence().forEach { raw ->
-            val line = raw.trim()
-            if (line.isEmpty()) return@forEach
-            // split on last comma
-            val idx = line.lastIndexOf(',')
-            if (idx <= 0) return@forEach
-            val name = line.substring(0, idx).trim()
-            var phone = line.substring(idx + 1).trim()
-            if (phone.startsWith("0")) phone = "+64$phone"
-            else if (!phone.startsWith("+")) phone = "+64$phone"
-            val digits = phone.filter { it.isDigit() }
-            if (name.isNotEmpty() && digits.length in 8..13) {
-                out.add(name to phone)
-            }
-        }
-        return out
-    }
+    private fun parseRecipients(): List<Pair<String, String>> =
+        Phones.parseRecipients(etRecipients.text.toString())
 
     private fun saveInputs() {
         Prefs.get(this).edit()
@@ -346,7 +329,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
         val text = lists.joinToString("\n") { l ->
-            val onW = if (l.source == "phone_scan")
+            val onW = if (l.source == ContactStore.SOURCE_PHONE_SCAN)
                 " (${l.entries.count { it.onWhatsApp }} on WhatsApp)" else ""
             "• ${l.label}: ${l.entries.size} contact(s)$onW"
         }
@@ -441,6 +424,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         try { unregisterReceiver(queueReceiver) } catch (_: Exception) {}
+        try { unregisterReceiver(scanReceiver) } catch (_: Exception) {}
+        try { unregisterReceiver(captureReceiver) } catch (_: Exception) {}
         super.onDestroy()
     }
 

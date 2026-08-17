@@ -2,6 +2,14 @@
 
 Guidance for AI agents working on this repository.
 
+## Skills (mandatory)
+
+Engineering workflow skills are installed in `.opencode/skills/` (reference
+checklists in `.opencode/references/`). Before acting on any request, check
+whether a skill applies and load it with the `skill` tool — see
+`using-agent-skills` for the entry point. Never skip a required workflow
+(spec, plan, test, review) or jump straight to implementation.
+
 ## Git workflow (mandatory)
 
 Every time the codebase is updated (any bug fix, feature, or change is committed),

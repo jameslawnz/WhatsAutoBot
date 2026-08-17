@@ -12,46 +12,53 @@ object ContactStore {
     private const val FILE = "whatsautobot_lists"
     private const val KEY_DATA = "lists_json"
 
-    private const val SOURCE_PHONE_SCAN = "phone_scan"
-    private const val SOURCE_GROUP_IMPORT = "group_import"
+    const val SOURCE_PHONE_SCAN = "phone_scan"
+    const val SOURCE_GROUP_IMPORT = "group_import"
+
+    /** In-memory cache so repeated load() calls during a scan don't re-parse the store. */
+    private var cache: MutableList<ContactList>? = null
 
     fun prefs(context: Context): android.content.SharedPreferences =
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 
     fun load(context: Context): MutableList<ContactList> {
+        cache?.let { return it }
         val json = prefs(context).getString(KEY_DATA, null)
         val out = mutableListOf<ContactList>()
-        if (json == null) return out
-        return try {
-            val arr = JSONArray(json)
-            for (i in 0 until arr.length()) {
-                val o = arr.getJSONObject(i)
-                val entries = JSONArray(o.getString("entries"))
-                val list = ContactList(
-                    id = o.getString("id"),
-                    label = o.getString("label"),
-                    source = o.getString("source"),
-                    entries = mutableListOf()
-                )
-                for (j in 0 until entries.length()) {
-                    val en = entries.getJSONObject(j)
-                    list.entries.add(
-                        ContactEntry(
-                            name = en.optString("name"),
-                            phone = en.optString("phone"),
-                            onWhatsApp = en.optBoolean("onWhatsApp", true)
-                        )
+        if (json != null) {
+            try {
+                val arr = JSONArray(json)
+                for (i in 0 until arr.length()) {
+                    val o = arr.getJSONObject(i)
+                    val entries = JSONArray(o.getString("entries"))
+                    val list = ContactList(
+                        id = o.getString("id"),
+                        label = o.getString("label"),
+                        source = o.getString("source"),
+                        entries = mutableListOf()
                     )
+                    for (j in 0 until entries.length()) {
+                        val en = entries.getJSONObject(j)
+                        list.entries.add(
+                            ContactEntry(
+                                name = en.optString("name"),
+                                phone = en.optString("phone"),
+                                onWhatsApp = en.optBoolean("onWhatsApp", true)
+                            )
+                        )
+                    }
+                    out.add(list)
                 }
-                out.add(list)
+            } catch (e: Exception) {
+                out.clear()
             }
-            out
-        } catch (e: Exception) {
-            out
         }
+        cache = out
+        return out
     }
 
     private fun save(context: Context, lists: List<ContactList>) {
+        cache = lists.toMutableList()
         val arr = JSONArray()
         for (l in lists) {
             val o = JSONObject()
@@ -108,6 +115,7 @@ object ContactStore {
     fun all(context: Context): List<ContactList> = load(context)
 
     fun clearAll(context: Context) {
+        cache = mutableListOf()
         prefs(context).edit().remove(KEY_DATA).apply()
     }
 
@@ -132,73 +140,29 @@ object ContactStore {
 class ContactReader(context: Context) {
     private val resolver = context.contentResolver
 
+    /** Single joined query over the phone table; avoids an N+1 lookup per contact. */
     fun allNumbers(): List<Pair<String, String>> { // (name, number)
         val out = mutableListOf<Pair<String, String>>()
         val seen = mutableSetOf<String>()
         val projection = arrayOf(
-            android.provider.ContactsContract.Contacts._ID,
-            android.provider.ContactsContract.Contacts.DISPLAY_NAME
+            android.provider.ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+            android.provider.ContactsContract.CommonDataKinds.Phone.NUMBER
         )
         val cur = resolver.query(
-            android.provider.ContactsContract.Contacts.CONTENT_URI,
+            android.provider.ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
             projection, null, null,
-            android.provider.ContactsContract.Contacts.DISPLAY_NAME
+            android.provider.ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME
         ) ?: return out
+        val nameCol = cur.getColumnIndexOrThrow(android.provider.ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
+        val numCol = cur.getColumnIndexOrThrow(android.provider.ContactsContract.CommonDataKinds.Phone.NUMBER)
         while (cur.moveToNext()) {
-            val cid = cur.getString(0)
-            val name = cur.getString(1) ?: ""
-            val p = resolver.query(
-                android.provider.ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
-                null,
-                android.provider.ContactsContract.CommonDataKinds.Phone.CONTACT_ID + " = ?",
-                arrayOf(cid), null
-            )
-            if (p != null) {
-                val numCol = p.getColumnIndex(android.provider.ContactsContract.CommonDataKinds.Phone.NUMBER)
-                while (p.moveToNext()) {
-                    val raw = p.getString(numCol) ?: continue
-                    val num = normalize(raw)
-                    if (num.isNotEmpty() && seen.add(num)) {
-                        out.add((if (name.isBlank()) num else name) to num)
-                    }
-                }
-                p.close()
+            val name = cur.getString(nameCol) ?: ""
+            val num = Phones.normalize(cur.getString(numCol) ?: "") ?: continue
+            if (seen.add(num)) {
+                out.add((if (name.isBlank()) num else name) to num)
             }
         }
         cur.close()
-        return out
-    }
-
-    private fun normalize(raw: String): String {
-        val digits = raw.filter { it.isDigit() }
-        return when {
-            digits.startsWith("64") && digits.length in 9..12 -> "+$digits"
-            digits.startsWith("0") && digits.length in 8..11 -> "+64${digits.substring(1)}"
-            digits.startsWith("+") -> "+$digits"
-            digits.length in 8..10 -> "+64$digits"
-            else -> ""
-        }
-    }
-}
-
-/** Parses "Name, phone" lines from the recipients field. */
-object RecipientParser {
-    fun parse(raw: String): List<Pair<String, String>> {
-        val out = mutableListOf<Pair<String, String>>()
-        raw.lineSequence().forEach { line ->
-            val l = line.trim()
-            if (l.isEmpty()) return@forEach
-            val idx = l.lastIndexOf(',')
-            if (idx <= 0) return@forEach
-            val name = l.substring(0, idx).trim()
-            var phone = l.substring(idx + 1).trim()
-            if (phone.startsWith("0") && phone.length in 9..11) phone = "+64${phone.substring(1)}"
-            else if (!phone.startsWith("+")) phone = "+64$phone"
-            val digits = phone.filter { it.isDigit() }
-            if (name.isNotEmpty() && digits.length in 9..13) {
-                out.add(name to phone)
-            }
-        }
         return out
     }
 }

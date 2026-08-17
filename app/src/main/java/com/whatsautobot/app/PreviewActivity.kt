@@ -37,7 +37,7 @@ class PreviewActivity : AppCompatActivity() {
         btnUse = findViewById(R.id.btn_use)
 
         val template = Prefs.template(this)
-        val recipients = parseRecipients(intent.getStringExtra("recipients") ?: "")
+        val recipients = Phones.parseRecipients(intent.getStringExtra("recipients") ?: "")
         if (recipients.isEmpty()) {
             tvRecipient.text = "No recipients"
             tvMessage.text = "Go back and add recipients."
@@ -80,24 +80,5 @@ class PreviewActivity : AppCompatActivity() {
         tvMessage.text = e.text
         tvProgress.text = "${index + 1} / ${entries.size}"
         lvQuick.setItemChecked(index, true)
-    }
-
-    private fun parseRecipients(raw: String): List<Pair<String, String>> {
-        val out = mutableListOf<Pair<String, String>>()
-        raw.lineSequence().forEach { line ->
-            val l = line.trim()
-            if (l.isEmpty()) return@forEach
-            val idx = l.lastIndexOf(',')
-            if (idx <= 0) return@forEach
-            val name = l.substring(0, idx).trim()
-            var phone = l.substring(idx + 1).trim()
-            if (phone.startsWith("0")) phone = "+64$phone"
-            else if (!phone.startsWith("+")) phone = "+64$phone"
-            val digits = phone.filter { it.isDigit() }
-            if (name.isNotEmpty() && digits.length in 8..13) {
-                out.add(name to phone)
-            }
-        }
-        return out
     }
 }
