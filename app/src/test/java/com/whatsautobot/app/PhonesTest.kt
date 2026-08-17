@@ -25,6 +25,13 @@ class PhonesTest {
     }
 
     @Test
+    fun normalize_keepsForeignCountryCode() {
+        assertEquals("+12125551234", Phones.normalize("+1 212 555 1234"))
+        assertEquals("+12125551234", Phones.normalize("12125551234"))
+        assertEquals("+442079460000", Phones.normalize("+44 20 7946 0000"))
+    }
+
+    @Test
     fun normalize_rejectsNonsense() {
         assertNull(Phones.normalize(""))
         assertNull(Phones.normalize("abc"))
@@ -34,7 +41,8 @@ class PhonesTest {
     @Test
     fun extract_findsNumberInText() {
         assertEquals("+6421668078", Phones.extract("call +64 21 668 078 now"))
-        assertEquals("+021668078", Phones.extract("John 021 668 078"))
+        assertEquals("+6421668078", Phones.extract("John 021 668 078"))
+        assertEquals("+12125551234", Phones.extract("reach +1 212 555 1234"))
     }
 
     @Test
@@ -55,5 +63,13 @@ class PhonesTest {
         val out = Phones.parseRecipients("NoPhone, abc\nEmptyName, +6421668078\n")
         assertEquals(1, out.size)
         assertEquals("EmptyName" to "+6421668078", out[0])
+    }
+
+    @Test
+    fun parseRecipients_usesPhoneAsNameForPhoneOnlyLines() {
+        val out = Phones.parseRecipients(", +6421668078\n+6421668078")
+        assertEquals(2, out.size)
+        assertEquals("+6421668078" to "+6421668078", out[0])
+        assertEquals("+6421668078" to "+6421668078", out[1])
     }
 }

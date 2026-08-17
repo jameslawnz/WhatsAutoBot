@@ -21,6 +21,11 @@ object ScanState {
     var probeCount = 0
     var probeScheduled = false
 
+    /** Bumped every time a new chat is opened; in-flight scan probes from a
+     *  previous chat detect the mismatch and abort instead of misclassifying. */
+    var generation = 0
+        private set
+
     fun start(list: List<Pair<String, String>>) {
         queue.clear()
         original.clear()
@@ -31,6 +36,7 @@ object ScanState {
         current = null
         probeCount = 0
         probeScheduled = false
+        generation = 0
     }
 
     fun size() = queue.size
@@ -54,6 +60,7 @@ object ScanState {
 
     fun pop(): Pair<String, String>? {
         current = queue.removeFirstOrNull()
+        generation++
         return current
     }
 
@@ -66,6 +73,7 @@ object ScanState {
         queue.clear()
         current = null
         probeScheduled = false
+        generation = 0
     }
 
     fun broadcast(context: Context, state: String) {

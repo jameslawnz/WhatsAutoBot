@@ -59,7 +59,6 @@ class ContactsActivity : AppCompatActivity() {
         btnUse.setOnClickListener {
             val l = selected ?: lists.firstOrNull()
             if (l == null) return@setOnClickListener
-            val entries = l.entries.joinToString("\n") { "${it.name.ifBlank { it.phone }}, ${it.phone}" }
             val intent = Intent(this, MainActivity::class.java)
             intent.putExtra("load_list_id", l.id)
             setResult(RESULT_OK, intent)
@@ -102,7 +101,8 @@ class ContactsActivity : AppCompatActivity() {
         val rows = l.entries.map {
             val flag = if (l.source == ContactStore.SOURCE_PHONE_SCAN) (if (it.onWhatsApp) " · on WhatsApp" else " · not on WhatsApp") else ""
             val name = it.name.ifBlank { it.phone }
-            "$name, ${it.phone}$flag"
+            val phone = it.phone.ifBlank { "(no number)" }
+            "$name, $phone$flag"
         }
         list.adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, rows)
     }

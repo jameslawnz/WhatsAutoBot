@@ -89,13 +89,15 @@ object ContactStore {
         val existingPhones = lists
             .filter { it.id != list.id }
             .flatMap { it.entries.map { e -> e.phone } }
+            .filter { it.isNotBlank() }
             .toHashSet()
-        // Deduplicate within the incoming list too.
+        // Deduplicate within the incoming list too. Blank phones (name-only group
+        // members) are keyed by name so they don't all collapse onto one entry.
         val seen = hashSetOf<String>()
         val deduped = mutableListOf<ContactEntry>()
         for (e in list.entries) {
-            val key = e.phone
-            if (key in existingPhones || !seen.add(key)) {
+            val key = if (e.phone.isNotBlank()) "p:${e.phone}" else "n:${e.name}"
+            if ((e.phone.isNotBlank() && e.phone in existingPhones) || !seen.add(key)) {
                 // already present elsewhere in the store -> skip re-adding
                 continue
             }
@@ -128,12 +130,6 @@ object ContactStore {
         val lists = load(context).map { if (it.id == id) it.copy(label = newLabel) else it }
         save(context, lists)
     }
-
-    fun totalEntries(context: Context): Int = load(context).sumOf { it.entries.size }
-
-    fun totalPhoneOnWhatsApp(context: Context): Int =
-        load(context).filter { it.source == SOURCE_PHONE_SCAN }
-            .sumOf { it.entries.count { e -> e.onWhatsApp } }
 }
 
 /** Reads the phone's address book. */

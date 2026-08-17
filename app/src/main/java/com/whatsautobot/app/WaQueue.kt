@@ -29,22 +29,11 @@ object WaQueue {
         messages.addLast(msg)
     }
 
-    fun enqueueAll(list: List<PendingMessage>) {
-        messages.addAll(list)
-    }
-
     fun size() = messages.size
-
-    fun isEmpty() = messages.isEmpty()
 
     fun peek(): PendingMessage? = messages.firstOrNull()
 
     fun pop(): PendingMessage? = if (messages.isNotEmpty()) messages.removeFirst() else null
-
-    fun start() {
-        isRunning = true
-        current = null
-    }
 
     fun stop() {
         isRunning = false

@@ -243,8 +243,7 @@ class MainActivity : AppCompatActivity() {
         val msg = WaQueue.peek() ?: return
         WaQueue.setCurrent(msg)
         try {
-            val uri = Uri.parse("https://wa.me/${msg.phone.replace("+", "")}?text=${Uri.encode(msg.text)}")
-            startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            startActivity(Intent(Intent.ACTION_VIEW, Phones.waMe(msg.phone, msg.text)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         } catch (e: Exception) {
             Toast.makeText(this, "Open WhatsApp first: ${e.message}", Toast.LENGTH_SHORT).show()
         }
@@ -306,8 +305,7 @@ class MainActivity : AppCompatActivity() {
     private fun openFirstScanChat() {
         val item = ScanState.pop() ?: return
         try {
-            val uri = Uri.parse("https://wa.me/${item.second.replace("+", "")}")
-            startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            startActivity(Intent(Intent.ACTION_VIEW, Phones.waMe(item.second)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         } catch (e: Exception) {
             Toast.makeText(this, "Open WhatsApp first: ${e.message}", Toast.LENGTH_SHORT).show()
         }
@@ -338,7 +336,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun loadListIntoRecipients(listId: String, onlyOnWhatsApp: Boolean = false) {
         val list = ContactStore.listOf(this, listId) ?: return
-        val entries = list.entries.filter { !onlyOnWhatsApp || it.onWhatsApp }
+        val entries = list.entries.filter { it.phone.isNotBlank() && (!onlyOnWhatsApp || it.onWhatsApp) }
         if (entries.isEmpty()) return
         etRecipients.setText(
             entries.joinToString("\n") { "${it.name}, ${it.phone}" }
